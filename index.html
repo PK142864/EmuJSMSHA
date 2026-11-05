@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>SnappyShortPie Emulator</title>
+  <title>PK142864 Emulator</title>
 
   <style>
     body {
@@ -40,7 +40,7 @@
 </head>
 <body>
 
-<h1>SnappyShortPie Emulator</h1>
+<h1>PK142864 Emulator</h1>
 
 <div id="controls">
   <select id="coreSelect">
@@ -48,21 +48,26 @@
     <option value="gb">Game Boy</option>
     <option value="gba">Game Boy Advance</option>
     <option value="snes">SNES</option>
+    <option value="n64">Nintendo 64</option>
+    <option value="ps1">PlayStation 1</option>
   </select>
 
-  <input type="file" id="romInput" accept=".nes,.gb,.gba,.smc,.sfc">
+  <input type="file" id="romInput" accept=".nes,.gb,.gba,.smc,.sfc,.z64,.n64,.v64,.bin,.iso,.img">
   <button id="fullscreenBtn">Fullscreen</button>
 </div>
 
 <div id="dropzone">Drop ROM here</div>
 
-<canvas id="screen" width="256" height="240"></canvas>
+<canvas id="screen" width="640" height="480"></canvas>
 
 <script type="module">
+  // Import PK142864 cores (you must have these in your repo)
   import { NES } from "./emu/cores/nes.js";
   import { GB } from "./emu/cores/gb.js";
   import { GBA } from "./emu/cores/gba.js";
   import { SNES } from "./emu/cores/snes.js";
+  import { N64 } from "./emu/cores/n64.js";
+  import { PS1 } from "./emu/cores/ps1.js";
 
   const canvas = document.getElementById("screen");
   const coreSelect = document.getElementById("coreSelect");
@@ -78,6 +83,8 @@
       case "gb":  return new GB({  canvas, audio:true, fps:60 });
       case "gba": return new GBA({ canvas, audio:true, fps:60 });
       case "snes":return new SNES({canvas, audio:true, fps:60 });
+      case "n64": return new N64({ canvas, audio:true });
+      case "ps1": return new PS1({ canvas, audio:true });
     }
   }
 
