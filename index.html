@@ -3,243 +3,83 @@
 <head>
   <meta charset="UTF-8">
   <title>PK142864 Emulator</title>
-
-  <style>
-    body {
-      background:#111;
-      color:#eee;
-      font-family:sans-serif;
-      text-align:center;
-      margin:0;
-      padding:20px;
-    }
-    #screen {
-      background:#000;
-      border:2px solid #444;
-      margin-top:20px;
-      touch-action:none;
-    }
-    #controls, #settings, #romLibrary {
-      margin-top:20px;
-    }
-    select, button, input[type="file"] {
-      padding:8px 12px;
-      margin:5px;
-      background:#222;
-      color:#eee;
-      border:1px solid #555;
-      cursor:pointer;
-    }
-    #dropzone {
-      margin:20px auto;
-      width:300px;
-      padding:20px;
-      border:2px dashed #555;
-      color:#aaa;
-    }
-    #romList button {
-      display:block;
-      width:200px;
-      margin:4px auto;
-    }
-    #touchControls {
-      margin-top:20px;
-    }
-    #touchControls button {
-      width:60px;
-      height:60px;
-      margin:5px;
-      border-radius:50%;
-    }
-  </style>
 </head>
 <body>
 
-<img src="assets/logo.svg" alt="PK142864 Logo" width="200">
-
 <h1>PK142864 Emulator</h1>
 
-<div id="controls">
-  <select id="coreSelect">
-    <option value="nes">NES</option>
-    <option value="gb">Game Boy</option>
-    <option value="gba">Game Boy Advance</option>
-    <option value="snes">SNES</option>
-    <option value="n64">Nintendo 64</option>
-    <option value="ps1">PlayStation 1</option>
-  </select>
+<p>Select system and ROM:</p>
 
-  <input type="file" id="romInput"
-    accept=".nes,.gb,.gba,.smc,.sfc,.z64,.n64,.v64,.bin,.iso,.img">
-  <button id="fullscreenBtn">Fullscreen</button>
-</div>
+<select id="system">
+  <option value="nes">NES</option>
+  <option value="snes">SNES</option>
+  <option value="gb">Game Boy</option>
+  <option value="gbc">Game Boy Color</option>
+  <option value="gba">Game Boy Advance</option>
+  <option value="n64">Nintendo 64</option>
+  <option value="psx">PlayStation 1</option>
+</select>
 
-<div id="dropzone">Drop ROM here</div>
+<select id="rom">
+  <option value="roms/example.nes">Example NES</option>
+  <option value="roms/example.smc">Example SNES</option>
+  <option value="roms/example.gb">Example GB</option>
+  <option value="roms/example.gbc">Example GBC</option>
+  <option value="roms/example.gba">Example GBA</option>
+  <option value="roms/example.n64">Example N64</option>
+  <option value="roms/example.bin">Example PSX</option>
+</select>
 
-<div id="settings">
-  <label>
-    <input type="checkbox" id="audioToggle" checked> Audio
-  </label>
-  <label>
-    FPS:
-    <input type="number" id="fpsInput" value="60" min="30" max="120">
-  </label>
-  <label>
-    <input type="checkbox" id="shaderToggle"> CRT Shader (simple)
-  </label>
-</div>
+<button id="startBtn">Start</button>
 
-<div id="romLibrary">
-  <h3>ROM Library</h3>
-  <div id="romList"></div>
-</div>
+<div id="game"></div>
 
-<canvas id="screen" width="640" height="480"></canvas>
+<script>
+  // EmulatorJS required globals
+  window.EJS_player = "#game";
+  window.EJS_core = "nes";
+  window.EJS_gameUrl = "";
+  window.EJS_pathtodata = "data/";
+  window.EJS_biosUrl = "";
+</script>
 
-<div id="touchControls">
-  <h3>Touch Controls (basic)</h3>
-  <button id="btnUp">↑</button>
-  <button id="btnDown">↓</button>
-  <button id="btnLeft">←</button>
-  <button id="btnRight">→</button>
-  <button id="btnA">A</button>
-  <button id="btnB">B</button>
-</div>
+<script src="data/emulator.js"></script>
 
-<script type="module">
-  import { NES } from "./emu/cores/nes.js";
-  import { GB } from "./emu/cores/gb.js";
-  import { GBA } from "./emu/cores/gba.js";
-  import { SNES } from "./emu/cores/snes.js";
-  import { N64 } from "./emu/cores/n64.js";
-  import { PS1 } from "./emu/cores/ps1.js";
-  import { defaultSettings, applySettings } from "./emu/utils/settings.js";
+<script>
+  const systemSelect = document.getElementById("system");
+  const romSelect = document.getElementById("rom");
+  const startBtn = document.getElementById("startBtn");
 
-  const canvas = document.getElementById("screen");
-  const coreSelect = document.getElementById("coreSelect");
-  const romInput = document.getElementById("romInput");
-  const dropzone = document.getElementById("dropzone");
-  const fullscreenBtn = document.getElementById("fullscreenBtn");
-  const audioToggle = document.getElementById("audioToggle");
-  const fpsInput = document.getElementById("fpsInput");
-  const shaderToggle = document.getElementById("shaderToggle");
-  const romList = document.getElementById("romList");
+  startBtn.onclick = () => {
+    const system = systemSelect.value;
+    const romPath = romSelect.value;
 
-  const touchButtons = {
-    up: document.getElementById("btnUp"),
-    down: document.getElementById("btnDown"),
-    left: document.getElementById("btnLeft"),
-    right: document.getElementById("btnRight"),
-    a: document.getElementById("btnA"),
-    b: document.getElementById("btnB")
-  };
-
-  let core = null;
-  let settings = { ...defaultSettings };
-
-  function loadCore(type) {
-    switch(type) {
-      case "nes": return new NES({ canvas, audio:settings.audio, fps:settings.fps });
-      case "gb":  return new GB({  canvas, audio:settings.audio, fps:settings.fps });
-      case "gba": return new GBA({ canvas, audio:settings.audio, fps:settings.fps });
-      case "snes":return new SNES({canvas, audio:settings.audio, fps:settings.fps });
-      case "n64": return new N64({ canvas, audio:settings.audio });
-      case "ps1": return new PS1({ canvas, audio:settings.audio });
-    }
-  }
-
-  function applyShader() {
-    if (!shaderToggle.checked) {
-      canvas.style.filter = "none";
-    } else {
-      canvas.style.filter = "contrast(1.2) saturate(0.9) blur(0.7px)";
-    }
-  }
-
-  function startROM(buffer) {
-    core = loadCore(coreSelect.value);
-    applySettings(core, settings);
-    core.loadROM(new Uint8Array(buffer));
-    core.start();
-    applyShader();
-  }
-
-  // File input
-  romInput.onchange = async e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const buf = await file.arrayBuffer();
-    startROM(buf);
-  };
-
-  // Drag & drop
-  dropzone.ondragover = e => {
-    e.preventDefault();
-    dropzone.style.borderColor = "#aaa";
-  };
-
-  dropzone.ondragleave = () => {
-    dropzone.style.borderColor = "#555";
-  };
-
-  dropzone.ondrop = async e => {
-    e.preventDefault();
-    dropzone.style.borderColor = "#555";
-
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-
-    const buf = await file.arrayBuffer();
-    startROM(buf);
-  };
-
-  // Fullscreen
-  fullscreenBtn.onclick = () => {
-    canvas.requestFullscreen();
-  };
-
-  // Settings
-  audioToggle.onchange = () => {
-    settings.audio = audioToggle.checked;
-    if (core) applySettings(core, settings);
-  };
-
-  fpsInput.onchange = () => {
-    settings.fps = parseInt(fpsInput.value, 10) || 60;
-    if (core) applySettings(core, settings);
-  };
-
-  shaderToggle.onchange = applyShader;
-
-  // ROM library (simple static list from roms/)
-  const roms = [
-    { name: "Example NES", path: "./roms/example.nes", system: "nes" },
-    { name: "Example GBA", path: "./roms/example.gba", system: "gba" }
-  ];
-
-  roms.forEach(rom => {
-    const btn = document.createElement("button");
-    btn.textContent = `${rom.name} (${rom.system.toUpperCase()})`;
-    btn.onclick = async () => {
-      coreSelect.value = rom.system;
-      const res = await fetch(rom.path);
-      const buf = await res.arrayBuffer();
-      startROM(buf);
+    const coreMap = {
+      nes: "nes",
+      snes: "snes",
+      gb: "gb",
+      gbc: "gbc",
+      gba: "gba",
+      n64: "n64",
+      psx: "psx"
     };
-    romList.appendChild(btn);
-  });
 
-  // Basic touch controls (stub)
-  Object.entries(touchButtons).forEach(([name, btn]) => {
-    btn.addEventListener("touchstart", e => {
-      e.preventDefault();
-      if (core && core.onTouchPress) core.onTouchPress(name);
-    });
-    btn.addEventListener("touchend", e => {
-      e.preventDefault();
-      if (core && core.onTouchRelease) core.onTouchRelease(name);
-    });
-  });
+    window.EJS_core = coreMap[system];
+    window.EJS_gameUrl = romPath;
+
+    if (system === "psx") {
+      window.EJS_biosUrl = "bios/scph1001.bin";
+    } else {
+      window.EJS_biosUrl = "";
+    }
+
+    if (window.EJS_reload) {
+      window.EJS_reload();
+    } else {
+      const qs = `?system=${system}&rom=${romPath}`;
+      window.location.search = qs;
+    }
+  };
 </script>
 
 </body>
